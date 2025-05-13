@@ -58,9 +58,9 @@ exports.login = async (req,res,next) => {
     }
     //return res.json({ user });
 
-    if (user.roleId===2 && !user.isApproved) {
-      return res.status(403).json({ error:'Coach not approved' });
-    }
+    // if (user.roleId===2 && !user.isApproved) {
+    //   return res.status(403).json({ error:'Coach not approved' });
+    // }
     const token = generateJwt(user);
     res.json({ token });
   } catch(err){ next(err); }

@@ -5,6 +5,9 @@ const Role = require('./role')(sequelize);
 const User = require('./user')(sequelize);
 const CoachPlayer = require('./coachPlayer')(sequelize);
 const MetricSample = require('./metricSample')(sequelize);
+const Match = require('./match')(sequelize);
+const Ground = require('./ground')(sequelize);
+
 
 // Associations
 Role.hasMany(User);
@@ -26,4 +29,14 @@ User.belongsToMany(User, {
 User.hasMany(MetricSample, { foreignKey: 'playerId' });
 MetricSample.belongsTo(User, { foreignKey: 'playerId' });
 
-module.exports = { sequelize, Role, User, CoachPlayer, MetricSample };
+// In your index.js or association setup file
+
+// Associations
+User.hasMany(Match, { foreignKey: 'createdBy' });
+Match.belongsTo(User, { foreignKey: 'createdBy' });
+
+Ground.hasMany(Match, { foreignKey: 'groundId' });
+Match.belongsTo(Ground, { foreignKey: 'groundId' });
+
+
+module.exports = { sequelize, Role, User, CoachPlayer, MetricSample, Match ,Ground };
