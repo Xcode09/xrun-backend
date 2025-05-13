@@ -12,7 +12,7 @@ exports.registerPlayer = async (req,res,next) => {
     const role = await Role.findOne({ where:{ name:'Player' }});
     const pwd = await hashPassword(req.body.password);
     const playerUuid = await generateUniquePlayerId(req.body);
-    const pic = ""; //req.file?`/uploads/${req.file.filename}`:null;
+    const pic = req.file?`/uploads/${req.file.filename}`:null;
 
     
     const user = await User.create({
