@@ -7,7 +7,8 @@ const CoachPlayer = require('./coachPlayer')(sequelize);
 const MetricSample = require('./metricSample')(sequelize);
 const Match = require('./match')(sequelize);
 const Ground = require('./ground')(sequelize);
-
+const smpts = require('./mailModel')(sequelize);
+const otp = require('./forgotPassowrdOtpModel')(sequelize);
 
 // Associations
 Role.hasMany(User);
@@ -39,4 +40,4 @@ Ground.hasMany(Match, { foreignKey: 'groundId' });
 Match.belongsTo(Ground, { foreignKey: 'groundId' });
 
 
-module.exports = { sequelize, Role, User, CoachPlayer, MetricSample, Match ,Ground };
+module.exports = { sequelize, Role, User, CoachPlayer, MetricSample, Match ,Ground, smpts, otp};

@@ -9,12 +9,17 @@ module.exports = (sequelize) => {
     country: DataTypes.STRING,
     mobile: DataTypes.STRING,
     email: { type: DataTypes.STRING, unique: true, allowNull: false },
-    passwordHash: { type: DataTypes.STRING, allowNull: false },
+    passwordHash: { type: DataTypes.STRING,
+      required: function () {
+            return !this.googleId && !this.appleId;  // Required only if no social login
+        } },
     pictureUrl: DataTypes.TEXT,
     playerUuid: { type: DataTypes.STRING, unique: true },
     coachUuid: { type: DataTypes.STRING, unique: true },
+    googleId: { type: DataTypes.STRING, default: null },
+    appleId: { type: DataTypes.STRING, default: null },  
     isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
-    isApproved: { type: DataTypes.BOOLEAN, defaultValue: false },
+    isApproved: { type: DataTypes.BOOLEAN, defaultValue: true },
     roleId: {
         type: DataTypes.INTEGER,
         allowNull: false,
