@@ -1,4 +1,4 @@
-const { Role, User, otp } = require('../models');
+const { Role, User, OTP } = require('../models');
 const {
   hashPassword,
   comparePassword,
@@ -9,6 +9,9 @@ const {
 const { Op } = require('sequelize');
 const otpGenerator = require("otp-generator");
 const sendOtpMail = require("../services/sendOtpMail");
+
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 exports.registerPlayer = async (req, res, next) => {
   try {
@@ -26,7 +29,30 @@ exports.registerPlayer = async (req, res, next) => {
       roleId: role.id
     });
 
-    res.status(201).json({ status: 0, message: "Player register Successfully", data: user });
+    const otp_n = otpGenerator.generate(4, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false });
+
+    const email = req.body.email;
+
+    // save OTP
+    const [record, created] = await OTP.findOrCreate({
+      where: { email },
+      defaults: { otp: otp_n } // ✅ use 'otp', not 'otp_n'
+    });
+
+    if (!created) {
+      await OTP.update({ otp: otp_n }, { where: { email } }); // ✅ correct field name
+    }
+
+    // Send OTP email
+    try {
+
+      await sendOtpMail(otp_n, req.body.email, req.body.firstName);
+
+    } catch (emailError) {
+      return res.json({ data: { success: 0, message: "Something went wrong. Please try again...", error: 1 } });
+    }
+
+    res.status(201).json({ status: 0, message: "Player register Successfully", data: {} });
 
     //return res.status(201).json({ id: role });
 
@@ -49,6 +75,8 @@ exports.registerCoach = async (req, res, next) => {
       pictureUrl: pic,
       roleId: role.id
     });
+
+
     res.status(201).json({ message: 'Coach pending approval' });
   } catch (err) { next(err); }
 }
@@ -172,83 +200,141 @@ exports.socialAuth = async (req, res, next) => {
 };
 
 exports.forgotpassword = async (req, res) => {
+  const { email } = req.body;
 
-    try {
+  const user = await User.findOne({ where: { email } });
 
-        // Extract data from the request body
-        const email = req.body.email;
+  // // User not found
+  // if (!user) {
+  //   return res.status(404).json({ data: { success: 0, message: `No user with this email ${email}`, error: 1 } });
+  // }
 
-        // Validate email
-        if (!email) {
-            return res.json({ data: { success: 0, message: "Email is required", error: 1 } });
-        }
+  // Check if user signed up only with Google or Apple
+  const isSocialOnly = !user.password && (user.googleId || user.appleId);
+  if (isSocialOnly) {
+    return res.status(404).json({ data: { success: 0, message: 'This account was created using a social login. Please log in with Google or Apple.', error: 1 } });
 
-        // Check if email exists 
-        const user = await User.findOne({ email });
+  }
 
-        if (!user) {
-            return res.json({ data: { success: 0, message: "Incorrect Email, please try again...", error: 1 } });
-        }
+  // Proceed with generating reset token
+  const token = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 3600000); // 1 hour
 
-        // Generate OTP
-        const otp_n = otpGenerator.generate(4, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false });
+  await user.update({
+    resetToken: token,
+    resetTokenExpires: expires,
+  });
 
-        // save OTP
-        let otpRecord = await otp.create({
-          email:email,
-          otp:otp_n
-        });
+  const resetLink = `https://xrun.genetum.com/api/auth/reset-password/${token}`;
+  
+  //`http://localhost:3000/api/auth/reset-password/${token}`;
 
-        
-        // Send OTP email
-        try {
+ 
 
-            await sendOtpMail(otp_n, email, "");
-
-        } catch (emailError) {
-            return res.json({ data: { success: 0, message: "Something went wrong. Please try again...", error: 1 } });
-        }
-
-        return res.json({ data: { success: 1, message: "We've sent an OTP to your email. Please check your inbox to reset your password.", error: 0 } });
-
-    } catch (error) {
-        console.log("Error during forgot password", error.message);
-        return res.json({ data: { success: 0, message: "An error occurred", error: 1 } });
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    requireTLS: true,
+    auth: {
+      user: "alisaleem877@gmail.com",
+      pass: "fhqe bbgn qnvu dtyz"
     }
-}
+  });
 
-// forgot password otp verification
-const forgotpasswordotpverification = async (req, res) => {
+  await transporter.sendMail({
+    to: user.email,
+    subject: 'Password Reset Request',
+    html: `<p>You requested a password reset</p>
+           <p><a href="${resetLink}">Click here to reset your password</a></p>`,
+  });
 
-    try {
+  return res.json({ status: 0, message: "Password reset email sent." });
+};
 
-        const { email, otp_n } = req.body;
 
-        // Validate email and otp
-        if (!email || !otp_n) {
-            return res.json({ data: { success: 0, message: "Email and OTP is required", error: 1 } });
-        }
+exports.otpverification = async (req, res) => {
 
-        // Check if there is an OTP record for the given email
-        const otpRecord = await otp.findOne({ email });
+  try {
 
-        if (!otpRecord) {
-            return res.json({ data: { success: 0, message: "Incorrect Email. Please try again...", error: 1 } });
-        }
+    const { email, otp_n } = req.body;
 
-        // Check if the provided OTP matches the stored OTP
-        if (otp !== otpRecord.otp) {
-            return res.json({ data: { success: 0, message: "Incorrect OTP. Please try again...", error: 1 } });
-        }
-
-        // Update the OTP verification status
-        otpRecord.isVerified = true;
-        await otpRecord.save();
-
-        return res.json({ data: { success: 1, message: "OTP verified successfully", error: 0 }});
-
-    } catch (error) {
-        console.log("Error during forgot password otp verification", error.message);
-        return res.json({ data: { success: 0, message: "An error occurred", error: 1 } });
+    // Validate email and otp
+    if (!email || !otp_n) {
+      return res.json({ data: { success: 0, message: "Email and OTP is required", error: 1 } });
     }
-}
+
+    // Check if there is an OTP record for the given email
+    const otpRecord = await OTP.findOne({ email });
+
+    if (!otpRecord) {
+      return res.json({ data: { success: 0, message: "Incorrect Email. Please try again...", error: 1 } });
+    }
+
+    // Check if the provided OTP matches the stored OTP
+    if (otp_n !== otpRecord.otp) {
+      return res.json({ data: { success: 0, message: "Incorrect OTP. Please try again...", error: 1 } });
+    }
+
+    // Update the OTP verification status
+    otpRecord.isVerified = true;
+    await otpRecord.save();
+
+    return res.json({ data: { success: 1, message: "OTP verified successfully", error: 0 } });
+
+  } catch (error) {
+    console.log("Error during forgot password otp verification", error.message);
+    return res.json({ data: { success: 0, message: "An error occurred", error: 1 } });
+  }
+};
+
+// GET /auth/reset-password/:token
+
+
+exports.resetLinkPassword = async (req, res) => {
+  const { token } = req.params;
+
+  const user = await User.findOne({
+    where: {
+      resetToken: token,
+      resetTokenExpires: { [Op.gt]: new Date() },
+    },
+  });
+
+  if (!user) {
+    return res.render('reset-password', { error: 'Token is invalid or expired' });
+  }
+
+  res.render('reset-password', { token });
+};
+
+
+
+exports.resetPassowrdWithToken = async (req, res) => {
+
+  const { token } = req.params;
+  const { password } = req.body;
+
+  const user = await User.findOne({
+    where: {
+      resetToken: token,
+      resetTokenExpires: { [Op.gt]: new Date() },
+    },
+  });
+
+  if (!user) {
+    return res.json({ data: { success: 1, message: "Token is invalid or expired", error: 0 } });
+
+  }
+
+  const hashedPassword = await hashPassword(password);
+
+  await user.update({
+    password: hashedPassword,
+    resetToken: null,
+    resetTokenExpires: null,
+  });
+
+  return res.json({ data: { success: 1, message: "Password has been reset successfully. You can now log in.", error: 0 } });
+
+};

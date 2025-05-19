@@ -1,8 +1,11 @@
 const router = require('express').Router();
 const upload = require('../middleware/upload');
-const { registerPlayer, registerCoach, login, socialAuth, forgotpassword} = require('../controllers/auth.controller');
+const { registerPlayer, registerCoach, login, socialAuth, forgotpassword,resetLinkPassword, resetPassowrdWithToken,otpverification} = require('../controllers/auth.controller');
 const { smtps } = require('../models/mailModel');
 router.post('/register/player', upload.single('picture'), registerPlayer);
+
+router.post('/register/otp',otpverification);
+
 router.post('/register/coach',  upload.single('picture'), registerCoach);
 router.post('/login', login);
 
@@ -12,6 +15,13 @@ router.post('/socail-login', socialAuth);
 
 
 router.post('/forgotPassword',forgotpassword);
+
+router.get('/reset-password/:token',resetLinkPassword);
+
+router.post('/reset-password/:token',resetPassowrdWithToken);
+
+
+
 
 
 
