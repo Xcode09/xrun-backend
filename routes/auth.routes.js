@@ -21,10 +21,13 @@ router.get('/reset-password/:token',resetLinkPassword);
 router.post('/reset-password/:token',resetPassowrdWithToken);
 
 
+<<<<<<< HEAD
+=======
 
 
 
 
+>>>>>>> parent of a3ea874 (Open AI)
 router.post('/smtps',async function addSmtp(req, res) {
     
     try {

@@ -33,11 +33,14 @@ MetricSample.belongsTo(User, { foreignKey: 'playerId' });
 // In your index.js or association setup file
 
 // Associations
-User.hasMany(Match, { foreignKey: 'createdBy' });
-Match.belongsTo(User, { foreignKey: 'createdBy' });
+User.hasMany(Match, { foreignKey: 'createdBy', as: 'createdMatches' });
+Match.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
 
 Ground.hasMany(Match, { foreignKey: 'groundId' });
 Match.belongsTo(Ground, { foreignKey: 'groundId' });
+
+Match.hasMany(MetricSample, { foreignKey: 'matchId', as: 'metrics' });
+MetricSample.belongsTo(Match, { foreignKey: 'matchId', as: 'match' });
 
 
 module.exports = { sequelize, Role, User, CoachPlayer, MetricSample, Match ,Ground, smpts, OTP};

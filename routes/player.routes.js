@@ -10,8 +10,12 @@ router.delete('/delete-account', authenticate, userController.deleteAccount);
 
 
 router.post('/match', authenticate, matchController.createMatch);
-router.get('/matches/by-date',authenticate, matchController.getMatchesByDate);
+router.get('/matches/by-date', authenticate, matchController.getMatchesByDate);
 
-
+router.get('/match/:matchId', authenticate, matchController.getMatchById);
+router.get('/matches', authenticate, matchController.getAllMatches);
+router.get('/grounds', authenticate, matchController.getAllGrounds);
+router.put('/match/:matchId', authenticate, matchController.updateMatch);
+router.delete('/match/:matchId', authenticate, matchController.deleteMatch);
 
 module.exports = router;
