@@ -1,7 +1,7 @@
 const { User } = require('../models');
 const { comparePassword, hashPassword } = require('../utils/auth.js');
 
-// 👤 Get Profile
+// 👤 Get Profile Player
 exports.getProfile = async (req, res, next) => {
   try {
     const user = req.user;
